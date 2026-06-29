@@ -79,13 +79,14 @@ stages:
     jobs:
     - job: TerraformInit
       steps:
-        - task: TerraformTaskV4@4
+        - task: AzureCLI@2
           inputs:
-            provider: 'azurerm'
-            command: 'init'
-            workingDirectory: '$(WORK_DIR)'
-            backendServiceArm: 'SKR-Service-Connection'
-            backendConfigFile: 'backend.hcl'
+            azureSubscription: 'SKR-Service-Connection'
+            scriptType: 'bash'
+            scriptLocation: 'inline'
+            inlineScript: |
+              cd $(WORK_DIR)
+              terraform init -backend-config="backend.hcl"
             displayName: 'Terraform Init'
 
   - stage: Plan
@@ -93,31 +94,28 @@ stages:
     jobs:
     - job: TerraformPlan
       steps:
-        - task: TerraformTaskV4@4
-          displayName: 'Terraform Plan'
+        - task: AzureCLI@2
           inputs:
-            provider: 'azurerm'
-            command: 'plan'
-            workingDirectory: $(WORK_DIR)
-            environmentServiceNameAzureRM: 'SKR-Service-Connection'
-            commandOptions: '-var-file=$(VAR_FILE) -out=tfplan'
-            displayName: 'Terraform Plan'
+            azureSubscription: 'SKR-Service-Connection'
+            scriptType: 'bash'
+            scriptLocation: 'inline'
+            inlineScript: |
+              cd $(WORK_DIR)
+              terraform plan -var-file=$(VAR_FILE) -out=tfplan
+              terraform show -json tfplan > tfplan.json
+          displayName: 'Terraform Plan'
 
   - stage: Apply
     dependsOn: Plan
     jobs:
-      - deployment: TerraformApply
-        environment: 'production'
-        strategy:
-          runOnce:
-            deploy:
-              steps:
-                - task: TerraformTaskV4@4
-                  displayName: 'Terraform Apply'
-                  inputs:
-                    provider: 'azurerm'
-                    command: 'apply'
-                    workingDirectory: $(WORK_DIR)
-                    environmentServiceNameAzureRM: 'SKR-Service-Connection'
-                    commandOptions: '-auto-approve tfplan'
-                    displayName: 'Terraform Apply'
+      - job: ApplyJob
+        steps:
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: 'SKR-Service-Connection'
+              scriptType: 'bash'
+              scriptLocation: 'inline'
+              inlineScript: |
+                cd $(WORK_DIR)
+                terraform apply -auto-approve tfplan
+            displayName: 'Terraform Apply'
