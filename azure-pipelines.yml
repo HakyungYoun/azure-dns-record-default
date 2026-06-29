@@ -83,7 +83,6 @@ stages:
           inputs:
             azureSubscription: 'SKR-Service-Connection'
             scriptType: 'bash'
-            scriptLocation: 'inline'
             inlineScript: |
               cd $(WORK_DIR)
               terraform init -backend-config="backend.hcl"
@@ -98,7 +97,6 @@ stages:
           inputs:
             azureSubscription: 'SKR-Service-Connection'
             scriptType: 'bash'
-            scriptLocation: 'inline'
             inlineScript: |
               cd $(WORK_DIR)
               terraform plan -var-file=$(VAR_FILE) -out=tfplan
@@ -114,7 +112,6 @@ stages:
             inputs:
               azureSubscription: 'SKR-Service-Connection'
               scriptType: 'bash'
-              scriptLocation: 'inline'
               inlineScript: |
                 cd $(WORK_DIR)
                 terraform apply -auto-approve tfplan
