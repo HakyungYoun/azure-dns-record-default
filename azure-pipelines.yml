@@ -68,6 +68,10 @@ stages:
               done < record-keys.txt
 
               mv merged.json $(VAR_FILE)
+              
+              cat > backend.hcl <<EOF
+              path = "$(STATE_DIR)/terraform.tfstate"
+              EOF
             displayName: 'Prepare TFVars'
 
   - stage: Init
@@ -81,6 +85,7 @@ stages:
             command: 'init'
             workingDirectory: '$(WORK_DIR)'
             backendServiceArm: 'SKR-Service-Connection'
+            backendConfigFile: 'backend.hcl'
             displayName: 'Terraform Init'
 
   - stage: Plan
