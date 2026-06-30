@@ -38,48 +38,48 @@ stages:
               
               # 💡 실패하면 자동으로 멈추되, 에러 내용만 error.log에 덮어씁니다.
               {
-                cat << 'EOF' > terraform.tfvars.json
-                ${{ convertToJson(parameters.VARIABLE) }}
-                EOF
+              cat << 'EOF' > terraform.tfvars.json
+              ${{ convertToJson(parameters.VARIABLE) }}
+              EOF
               
-                mv $(Build.SourcesDirectory)/* $(WORK_DIR)
+              mv $(Build.SourcesDirectory)/* $(WORK_DIR)
               
-                # 기존 State 파일 확인
-                STATE_FILE="$(WORK_DIR)/$(VAR_FILE)"
-                if [ -f "$STATE_FILE" ]; then
-                  cp "$STATE_FILE" $(WORK_DIR)/merged.json
-                else
-                  echo '{"private_dns_records":{}}' > $(WORK_DIR)/merged.json
-                fi
+              # 기존 State 파일 확인
+              STATE_FILE="$(WORK_DIR)/$(VAR_FILE)"
+              if [ -f "$STATE_FILE" ]; then
+                cp "$STATE_FILE" $(WORK_DIR)/merged.json
+              else
+                echo '{"private_dns_records":{}}' > $(WORK_DIR)/merged.json
+              fi
               
-                # Variable 병합을 위한 키 추출
-                jq -c '.private_dns_records[] | "\(.resource_group_name)__\(.dns_zone_name)__\(.name)"' terraform.tfvars.json > record-keys.txt
+              # Variable 병합을 위한 키 추출
+              jq -c '.private_dns_records[] | "\(.resource_group_name)__\(.dns_zone_name)__\(.name)"' terraform.tfvars.json > record-keys.txt
               
-                # Variable 병합을 위한 기존 파일 복사
-                cp $(VAR_FILE) merged.json
+              # Variable 병합을 위한 기존 파일 복사
+              cp $(VAR_FILE) merged.json
               
-                # Variable 병합
-                while read -r target_key; do
-                    target_key=$(echo "$target_key" | jq -r .)
-                    if [ "${{ parameters.ACTION }}" = "delete" ]; then
-                        jq --arg k "$target_key" \
-                            '.private_dns_records |= with_entries(select(("\(.value.resource_group_name)__\(.value.dns_zone_name)__\(.value.name)") != $k))' \
-                            merged.json > tmp.json && mv tmp.json merged.json
-                    else
-                        spec=$(jq -c --arg k "$target_key" \
-                          '.private_dns_records[] | select("\(.resource_group_name)__\(.dns_zone_name)__\(.name)" == $k)' \
-                            terraform.tfvars.json)
-                        jq --arg k "$target_key" --argjson spec "$spec" \
-                            '.private_dns_records |= (with_entries(select(("\(.value.resource_group_name)__\(.value.dns_zone_name)__\(.value.name)") != $k)) + {($k): $spec})' \
-                            merged.json > tmp.json && mv tmp.json merged.json
-                    fi
-                done < record-keys.txt
+              # Variable 병합
+              while read -r target_key; do
+                  target_key=$(echo "$target_key" | jq -r .)
+                  if [ "${{ parameters.ACTION }}" = "delete" ]; then
+                      jq --arg k "$target_key" \
+                          '.private_dns_records |= with_entries(select(("\(.value.resource_group_name)__\(.value.dns_zone_name)__\(.value.name)") != $k))' \
+                          merged.json > tmp.json && mv tmp.json merged.json
+                  else
+                      spec=$(jq -c --arg k "$target_key" \
+                        '.private_dns_records[] | select("\(.resource_group_name)__\(.dns_zone_name)__\(.name)" == $k)' \
+                          terraform.tfvars.json)
+                      jq --arg k "$target_key" --argjson spec "$spec" \
+                          '.private_dns_records |= (with_entries(select(("\(.value.resource_group_name)__\(.value.dns_zone_name)__\(.value.name)") != $k)) + {($k): $spec})' \
+                          merged.json > tmp.json && mv tmp.json merged.json
+                  fi
+              done < record-keys.txt
 
-                mv merged.json $(VAR_FILE)
+              mv merged.json $(VAR_FILE)
               
-                cat > backend.hcl <<EOF
-                path = "$(STATE_DIR)/terraform.tfstate"
-                EOF
+              cat > backend.hcl <<EOF
+              path = "$(STATE_DIR)/terraform.tfstate"
+              EOF
               } 2>error.log
             displayName: 'Prepare TFVars'
 
