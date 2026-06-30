@@ -20,7 +20,7 @@ variables:
   - name: WORK_DIR
     value: '$(BASE_DIR)/runs/${{ parameters.REQUEST_ID }}'
   - name: STATE_DIR
-    value: '$(BASE_DIR)/state/$(ENV)/${{ parameters.PROJECT }}/$(STACK)'
+    value: '$(BASE_DIR)/state/${{ parameters.ENV }}/${{ parameters.PROJECT }}/$(STACK)'
   - name: VAR_FILE
     value: 'records.auto.tfvars.json'
 
