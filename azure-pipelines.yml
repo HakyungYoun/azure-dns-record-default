@@ -108,15 +108,19 @@ stages:
   - stage: Apply
     dependsOn: Plan
     jobs:
-      - job: ApplyJob
-        steps:
-          - task: AzureCLI@2
-            inputs:
-              azureSubscription: 'SKR-Service-Connection'
-              scriptType: 'bash'
-              scriptLocation: 'inlineScript'
-              inlineScript: |
-                cd $(WORK_DIR)
-                terraform apply -auto-approve tfplan
-                cp $(VAR_FILE) $(STATE_DIR)/$(VAR_FILE)
-            displayName: 'Terraform Apply'
+      - deployment: ApplyJob
+        environment: terraform-apply-approval
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: AzureCLI@2
+                  inputs:
+                    azureSubscription: 'SKR-Service-Connection'
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    inlineScript: |
+                      cd $(WORK_DIR)
+                      terraform apply -auto-approve tfplan
+                      cp $(VAR_FILE) $(STATE_DIR)/$(VAR_FILE)
+                  displayName: 'Terraform Apply'
