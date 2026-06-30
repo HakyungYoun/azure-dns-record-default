@@ -118,4 +118,5 @@ stages:
               inlineScript: |
                 cd $(WORK_DIR)
                 terraform apply -auto-approve tfplan
+                cp $(VAR_FILE) $(STATE_DIR)/$(VAR_FILE)
             displayName: 'Terraform Apply'
