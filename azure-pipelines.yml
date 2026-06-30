@@ -7,6 +7,10 @@ parameters:
     type: string
   - name: ACTION
     type: string
+  - name: ENV
+    type: string
+  - name: VARIABLE
+    type: string
 
 pool:
   name: 'skr-azure-pipeline'
@@ -34,6 +38,10 @@ stages:
               
               # 💡 실패하면 자동으로 멈추되, 에러 내용만 error.log에 덮어씁니다.
               {
+                cat << 'EOF' > terraform.tfvars.json
+                ${{ convertToJson(parameters.VARIABLE) }}
+                EOF
+              
                 mv $(Build.SourcesDirectory)/* $(WORK_DIR)
               
                 # 기존 State 파일 확인
@@ -105,6 +113,19 @@ stages:
                 cd $(WORK_DIR)
                 terraform plan -var-file=$(VAR_FILE) -out=tfplan 2>error.log
                 terraform show -json tfplan > tfplan.json
+                
+                PLAN_JSON=$(cat tfplan.json | sed 's/"/\\"/g' | tr '\n' ' ')
+                
+                curl -X POST "https://13.124.121.66:8000/api/plan/success" \
+                -H "Content-Type: application/json" \
+                -d @- <<EOF
+                {
+                  "pipelineId": "$(Build.BuildId)",
+                  "status": "plan_success",
+                  "requestId": "$(REQUEST_ID)",
+                  "planResult": "${PLAN_JSON}"
+                }
+                EOF
             displayName: 'Terraform Plan'
 
   - stage: Apply
@@ -151,7 +172,7 @@ stages:
                   ERROR_MSG=$(cat "$LOG_FILE" | sed 's/"/\\"/g' | tr '\n' ' ')
                 fi
                 
-                curl -X POST "https://portal/api/v1/pipeline-status" \
+                curl -X POST "https://13.124.121.66:8000/api/pipeline/failed" \
                   -H "Content-Type: application/json" \
                   -d @- <<EOF
                 {
