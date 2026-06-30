@@ -39,7 +39,7 @@ stages:
               # 💡 실패하면 자동으로 멈추되, 에러 내용만 error.log에 덮어씁니다.
               {
               cat << 'EOF' > terraform.tfvars.json
-              ${{ convertToJson(parameters.VARIABLE) }}
+              ${{ parameters.VARIABLE }}
               EOF
               
               mv $(Build.SourcesDirectory)/* $(WORK_DIR)
