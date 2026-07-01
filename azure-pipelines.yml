@@ -128,7 +128,7 @@ stages:
               targetType: 'inline'
               script: |
                 {
-                PLAN_JSON=$(cat $(WORK_DIR)/tfplan.json | sed 's/"/\\"/g' | tr '\n' ' ')
+                PLAN_JSON=$(cat $(WORK_DIR)/tfplan.json | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | tr '\n' ' ' | tr '\t' ' ')
 
                 curl -X POST "http://13.124.121.66:8000/api/plan/success" \
                   -H "Content-Type: application/json" \
@@ -161,6 +161,22 @@ stages:
                       terraform apply -auto-approve tfplan 2>error.log
                       cp $(VAR_FILE) $(STATE_DIR)/$(VAR_FILE)
                   displayName: 'Terraform Apply'
+
+  - stage: NotifyApplySuccess
+    displayName: 'Notify Success'
+    dependsOn: Apply
+    condition: succeeded('Apply')
+    jobs:
+      - job: SendSuccess
+        steps:
+          - task: Bash@3
+            displayName: 'Notify Pipeline Success'
+            inputs:
+              targetType: 'inline'
+              script: |
+                curl -X POST "http://13.124.121.66:8000/api/pipeline/success" \
+                  -H "Content-Type: application/json" \
+                  -d "{\"requestId\": \"${{ parameters.REQUEST_ID }}\"}"
 
   # global error handler
   - stage: HandleFailure
@@ -198,19 +214,3 @@ stages:
                   "errorMessage": "${ERROR_MSG}"
                 }
                 EOF
-                
-  - stage: NotifySuccess
-    displayName: 'Notify Success'
-    dependsOn: Apply
-    condition: succeeded('Apply')
-    jobs:
-      - job: SendSuccess
-        steps:
-          - task: Bash@3
-            displayName: 'Notify Pipeline Success'
-            inputs:
-              targetType: 'inline'
-              script: |
-                curl -X POST "http://13.124.121.66:8000/api/pipeline/success" \
-                  -H "Content-Type: application/json" \
-                  -d "{\"requestId\": \"${{ parameters.REQUEST_ID }}\"}"
