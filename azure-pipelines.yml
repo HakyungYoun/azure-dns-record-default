@@ -116,7 +116,7 @@ stages:
                 
                 PLAN_JSON=$(cat tfplan.json | sed 's/"/\\"/g' | tr '\n' ' ')
                 
-                curl -X POST "https://13.124.121.66:8000/api/plan/success" \
+                curl -X POST "http://13.124.121.66:8000/api/plan/success" \
                 -H "Content-Type: application/json" \
                 -d @- <<EOF
                 {
@@ -172,14 +172,14 @@ stages:
                   ERROR_MSG=$(cat "$LOG_FILE" | sed 's/"/\\"/g' | tr '\n' ' ')
                 fi
                 
-                curl -X POST "https://13.124.121.66:8000/api/pipeline/failed" \
+                curl -X POST "http://13.124.121.66:8000/api/pipeline/failed" \
                   -H "Content-Type: application/json" \
                   -d @- <<EOF
                 {
                   "pipelineId": "$(Build.BuildId)",
                   "status": "failed",
                   "failedStage": "$(System.StageName)",
-                  "requestId": "$(REQUEST_ID)",
+                  "requestId": "${{ parameters.REQUEST_ID }}",
                   "errorMessage": "${ERROR_MSG}"
                 }
                 EOF
