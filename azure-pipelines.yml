@@ -113,12 +113,26 @@ stages:
                 cd $(WORK_DIR)
                 terraform plan -var-file=$(VAR_FILE) -out=tfplan 2>error.log
                 terraform show -json tfplan > tfplan.json
-                
-                PLAN_JSON=$(cat tfplan.json | sed 's/"/\\"/g' | tr '\n' ' ')
-                
+            displayName: 'Terraform Plan'
+
+  - stage: NotifyPlanSuccess
+    displayName: 'Notify Plan Success'
+    dependsOn: Plan
+    condition: succeeded('Plan')
+    jobs:
+      - job: SendPlanResult
+        steps:
+          - task: Bash@3
+            displayName: 'Send Plan Result'
+            inputs:
+              targetType: 'inline'
+              script: |
+                {
+                PLAN_JSON=$(cat $(WORK_DIR)/tfplan.json | sed 's/"/\\"/g' | tr '\n' ' ')
+
                 curl -X POST "http://13.124.121.66:8000/api/plan/success" \
-                -H "Content-Type: application/json" \
-                -d @- <<EOF
+                  -H "Content-Type: application/json" \
+                  -d @- <<EOF
                 {
                   "pipelineId": "$(Build.BuildId)",
                   "status": "plan_success",
@@ -126,7 +140,7 @@ stages:
                   "planResult": "${PLAN_JSON}"
                 }
                 EOF
-            displayName: 'Terraform Plan'
+                } 2>$(WORK_DIR)/error.log
 
   - stage: Apply
     dependsOn: Plan
@@ -155,6 +169,7 @@ stages:
       - Prepare
       - Init
       - Plan
+      - NotifyPlanSuccess
       - Apply
     condition: and(always(), failed())
     jobs:
